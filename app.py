@@ -61,49 +61,53 @@ prompt = st.text_area(
 # -------------------------------
 # Generate Button
 # -------------------------------
-if st.button("✨ Generate Content", use_container_width=True):
+if st.button("✨ Generate Content"):
 
     if not prompt.strip():
         st.warning("Please enter a prompt.")
+
     else:
 
         with st.spinner("Generating content..."):
 
-messages = [
-    {"role": "user", "content": prompt}
-]
+            messages = [
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
 
-text = tokenizer.apply_chat_template(
-    messages,
-    tokenize=False,
-    add_generation_prompt=True
-)
+            text = tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True
+            )
 
-inputs = tokenizer(text, return_tensors="pt")
+            inputs = tokenizer(
+                text,
+                return_tensors="pt"
+            )
 
-outputs = model.generate(
-    **inputs,
-    max_new_tokens=max_tokens,
-    do_sample=True,
-    temperature=0.7,
-    top_p=0.9,
-    repetition_penalty=1.1,
-    pad_token_id=tokenizer.eos_token_id
-)
+            outputs = model.generate(
+                **inputs,
+                max_new_tokens=max_tokens,
+                do_sample=True,
+                temperature=0.7,
+                top_p=0.9,
+                repetition_penalty=1.1,
+                pad_token_id=tokenizer.eos_token_id
+            )
 
-generated_tokens = outputs[0][inputs.input_ids.shape[-1]:]
+            generated_tokens = outputs[0][inputs.input_ids.shape[-1]:]
 
-answer = tokenizer.decode(
-    generated_tokens,
-    skip_special_tokens=True
-)
-
-print(answer)
+            answer = tokenizer.decode(
+                generated_tokens,
+                skip_special_tokens=True
+            )
 
         st.success("Content Generated Successfully!")
 
         st.subheader("Generated Content")
-
         st.write(answer)
 
         col1, col2 = st.columns(2)
