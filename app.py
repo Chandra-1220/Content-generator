@@ -1,67 +1,94 @@
 import streamlit as st
-from transformers import pipeline
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
-# ---------------- Page Config ----------------
+# -------------------------------
+# Page Configuration
+# -------------------------------
 st.set_page_config(
     page_title="AI Content Generator",
     page_icon="🤖",
     layout="wide"
 )
 
-# ---------------- Load Model ----------------
+# -------------------------------
+# Load Model
+# -------------------------------
 @st.cache_resource
 def load_model():
-    return pipeline(
-        "text2text-generation",
-        model="google/flan-t5-base"
-    )
+    model_name = "google/flan-t5-base"
 
-generator = load_model()
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
 
-# ---------------- Header ----------------
+    return tokenizer, model
+
+
+tokenizer, model = load_model()
+
+# -------------------------------
+# Title
+# -------------------------------
 st.title("🤖 AI Content Generator")
 st.write("Generate notes, essays, emails, explanations, and more using AI.")
 
-# ---------------- Sidebar ----------------
+# -------------------------------
+# Sidebar
+# -------------------------------
 st.sidebar.header("Settings")
 
 max_tokens = st.sidebar.slider(
-    "Maximum Output Length",
+    "Maximum Output Tokens",
     min_value=50,
     max_value=500,
     value=200
 )
 
-# ---------------- Input ----------------
+# -------------------------------
+# User Input
+# -------------------------------
 prompt = st.text_area(
     "Enter your prompt",
     height=200,
     placeholder="""Examples:
+
 • Write short notes on Artificial Intelligence.
 • Explain Machine Learning.
+• Write an essay on Climate Change.
 • Write an email requesting leave.
-• Write a paragraph on Climate Change."""
+"""
 )
 
-# ---------------- Generate ----------------
-if st.button("Generate Content", use_container_width=True):
+# -------------------------------
+# Generate Button
+# -------------------------------
+if st.button("✨ Generate Content", use_container_width=True):
 
-    if prompt.strip() == "":
+    if not prompt.strip():
         st.warning("Please enter a prompt.")
     else:
 
         with st.spinner("Generating content..."):
 
-            result = generator(
+            inputs = tokenizer(
                 prompt,
+                return_tensors="pt",
+                truncation=True
+            )
+
+            outputs = model.generate(
+                **inputs,
                 max_new_tokens=max_tokens
             )
 
-            answer = result[0]["generated_text"]
+            answer = tokenizer.decode(
+                outputs[0],
+                skip_special_tokens=True
+            )
 
         st.success("Content Generated Successfully!")
 
         st.subheader("Generated Content")
+
         st.write(answer)
 
         col1, col2 = st.columns(2)
@@ -73,12 +100,12 @@ if st.button("Generate Content", use_container_width=True):
             st.metric("Generated Words", len(answer.split()))
 
         st.download_button(
-            "Download Result",
-            answer,
+            label="📥 Download Result",
+            data=answer,
             file_name="generated_content.txt",
             mime="text/plain"
         )
 
-# ---------------- Footer ----------------
 st.divider()
-st.caption("Built with ❤️ using Streamlit and Hugging Face")
+
+st.caption("Built with ❤️ using Streamlit & Hugging Face Transformers")
