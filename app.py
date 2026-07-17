@@ -1,5 +1,5 @@
 import streamlit as st
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+from transformers import AutoTokenizer, AutoModelForCausalLM
 
 # -------------------------------
 # Page Configuration
@@ -15,10 +15,10 @@ st.set_page_config(
 # -------------------------------
 @st.cache_resource
 def load_model():
-    model_name = "google/flan-t5-base"
+    model_name = "Qwen/Qwen2.5-0.5B-Instruct"
 
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+    model = AutoModelForCausalLM.from_pretrained(model_name)
 
     return tokenizer, model
 
@@ -69,21 +69,36 @@ if st.button("✨ Generate Content", use_container_width=True):
 
         with st.spinner("Generating content..."):
 
-            inputs = tokenizer(
-                prompt,
-                return_tensors="pt",
-                truncation=True
-            )
+messages = [
+    {"role": "user", "content": prompt}
+]
 
-            outputs = model.generate(
-                **inputs,
-                max_new_tokens=max_tokens
-            )
+text = tokenizer.apply_chat_template(
+    messages,
+    tokenize=False,
+    add_generation_prompt=True
+)
 
-            answer = tokenizer.decode(
-                outputs[0],
-                skip_special_tokens=True
-            )
+inputs = tokenizer(text, return_tensors="pt")
+
+outputs = model.generate(
+    **inputs,
+    max_new_tokens=max_tokens,
+    do_sample=True,
+    temperature=0.7,
+    top_p=0.9,
+    repetition_penalty=1.1,
+    pad_token_id=tokenizer.eos_token_id
+)
+
+generated_tokens = outputs[0][inputs.input_ids.shape[-1]:]
+
+answer = tokenizer.decode(
+    generated_tokens,
+    skip_special_tokens=True
+)
+
+print(answer)
 
         st.success("Content Generated Successfully!")
 
